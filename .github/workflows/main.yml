@@ -1,0 +1,61 @@
+name: Deploy Node.js App to VPS
+
+on:
+  push:
+    branches:
+      - main
+      - '**'  # Matches all other branches
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      # Deploy to Production Server if pushing to 'main' branch
+      - name: Deploy to Production Server
+        if: github.ref == 'refs/heads/main'
+        uses: appleboy/ssh-action@master
+        with:
+          host: 178.16.137.59
+          username: root
+          password: Salem@6698
+          port: 22
+          script: |
+            cd ~/injazMain
+            git pull
+            export NODE_PATH=/etc/nodejs/current
+            export PATH=$NODE_PATH/bin:$PATH
+            export DANGEROUSLY_DISABLE_HOST_CHECK=true
+
+            cd apiService
+            npm install -f
+            pm2 restart injazMainAPIServer
+
+            cd ../portal
+            npm install -f
+            npm run build
+            pm2 restart injazMainPortal
+
+
+      # Deploy to Integration Server if pushing to any other branch
+      # - name: Deploy to Integration Server
+      #   if: github.ref != 'refs/heads/main'
+      #   uses: appleboy/ssh-action@master
+      #   with:
+      #     host: 178.16.137.59
+      #     username: root
+      #     password: Salem@6698
+      #     port: 22
+      #     script: |
+      #       cd ~/injazDev  # Path for the integration server
+      #       git checkout ${{ github.ref_name }}  # Switch to the pushed branch
+      #       git pull origin ${{ github.ref_name }}  # Pull the specific branch
+      #       export NODE_PATH=/etc/nodejs/current
+      #       export PATH=$NODE_PATH/bin:$PATH
+      #       export DANGEROUSLY_DISABLE_HOST_CHECK=true
+
+      #       npm run install
+      #       pm2 restart injazDevServer
